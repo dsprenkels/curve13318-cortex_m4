@@ -1,0 +1,10 @@
+[package]
+name = "fe25519-sys"
+version = "0.1.0"
+authors = ["Amber Sprenkels <amber@electricdusk.com>"]
+edition = "2018"
+include = ["wrapper.h"]
+
+[build-dependencies]
+bindgen = "0.49.2"
+cc = "1.0.37"

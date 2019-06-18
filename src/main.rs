@@ -40,122 +40,112 @@ fn dump_ge(name: &'static str, p: &mut GE) {
     .unwrap();
 }
 
-/// Double a point
 fn ge_double(p: &GE) -> GE {
-    // In this function, I apply a trick that was proposed to me by
-    // P. Barreto: Instead of computing the operations {5,7,29} using a
-    // regular (slow) multiplication, we use the fact that A*B can be
-    // computed by A*B = (A + B)^2 - A^2 - B^2.
-    //
-    // In performance, we trade (three times) 1M + 1a against
-    // 1S + 3a. With this, the new op counts of Algorithm 6 become
-    // 5M + 6S + 2m_b + 30a.
-    //
     let &(x, y, z) = p;
-
-    let x_sq = fe25519::square(&x); //  1.
-    let y_sq = fe25519::square(&y); //  2.
-    let z_sq = fe25519::square(&z); //  3.
-
-    // Compute 2XY (operation 5)
-    let tmp = fe25519::add(&x, &y); // X + Y
-    let tmp = fe25519::square(&tmp); // X^2 + Y^2 + 2XY
-    let tmp = fe25519::sub(&tmp, &x_sq); // Y^2 + 2XY
-    let v5 = fe25519::sub(&tmp, &y_sq);
-
-    // Compute 2XZ (operation 7)
-    let tmp = fe25519::add(&x, &z); // X + Z
-    let tmp = fe25519::square(&tmp); // X^2 + Z^2 + 2XZ
-    let tmp = fe25519::sub(&tmp, &x_sq); // Z^2 + 2XZ
-    let v7 = fe25519::sub(&tmp, &z_sq); // 2XZ
-
-    // Compute 2YZ (operation 29)
-    let tmp = fe25519::add(&y, &z); // Y + Z
-    let tmp = fe25519::square(&tmp); // Y^2 + Z^2 + 2YZ
-    let tmp = fe25519::sub(&tmp, &y_sq); // Z^2 + 2YZ
-    let v29 = fe25519::sub(&tmp, &z_sq); // 2YZ
-
-    // Compute the rest of the values just using RCB-Algorithm 6
-    let t3 = v5; //  5.
-    let z3 = v7; //  7.
-    let y3 = fe25519::mul_u16(&z_sq, B); //  8.
-    let y3 = fe25519::sub(&y3, &z3); //  9.
-    let x3 = fe25519::add(&y3, &y3); // 10.
-    let y3 = fe25519::add(&x3, &y3); // 11.
-    let x3 = fe25519::sub(&y_sq, &y3); // 12.
-    let y3 = fe25519::add(&y_sq, &y3); // 13.
-    let y3 = fe25519::mul(&x3, &y3); // 14.
-    let x3 = fe25519::mul(&x3, &t3); // 15.
-    let t3 = fe25519::add(&z_sq, &z_sq); // 16.
-    let t2 = fe25519::add(&z_sq, &t3); // 17.
-    let z3 = fe25519::mul_u16(&z3, B); // 18.
-    let z3 = fe25519::sub(&z3, &t2); // 19.
-    let z3 = fe25519::sub(&z3, &x_sq); // 20.
-    let t3 = fe25519::add(&z3, &z3); // 21.
-    let z3 = fe25519::add(&z3, &t3); // 22.
-    let t3 = fe25519::add(&x_sq, &x_sq); // 23.
-    let t0 = fe25519::add(&t3, &x_sq); // 24.
-    let t0 = fe25519::sub(&t0, &t2); // 25.
-    let t0 = fe25519::mul(&t0, &z3); // 26.
-    let y3 = fe25519::add(&y3, &t0); // 27.
-    let t0 = v29; // 29.
-    let z3 = fe25519::mul(&t0, &z3); // 30.
-    let x3 = fe25519::sub(&x3, &z3); // 31.
-    let z3 = fe25519::mul(&t0, &y_sq); // 32.
-    let z3 = fe25519::add(&z3, &z3); // 33.
-    let z3 = fe25519::add(&z3, &z3); // 34.
-
+    
+    let mut t0;
+    let t1;
+    let mut t2;
+    let mut t3;
+    let mut x3;
+    let mut y3;
+    let mut z3;
+    
+    // TODO(dsprenkels) Try Karatsuba trick
+    t0 = fe25519::square(&x); //  1.
+    t1 = fe25519::square(&y); //  2.
+    t2 = fe25519::square(&z); //  3.
+    t3 = fe25519::mul(&x, &y); //  4.
+    t3 = fe25519::add(&t3, &t3); //  5.
+    z3 = fe25519::mul(&x, &z); //  6.
+    z3 = fe25519::add(&z3, &z3); //  7.
+    y3 = fe25519::mul_u16(&t2, B); //  8.
+    y3 = fe25519::sub(&y3, &z3); //  9.
+    x3 = fe25519::add(&y3, &y3); // 10.
+    y3 = fe25519::add(&x3, &y3); // 11.
+    x3 = fe25519::sub(&t1, &y3); // 12.
+    y3 = fe25519::add(&t1, &y3); // 13.
+    y3 = fe25519::mul(&x3, &y3); // 14.
+    x3 = fe25519::mul(&x3, &t3); // 15.
+    t3 = fe25519::add(&t2, &t2); // 16.
+    t2 = fe25519::add(&t2, &t3); // 17.
+    z3 = fe25519::mul_u16(&z3, B); // 18.
+    z3 = fe25519::sub(&z3, &t2); // 19.
+    z3 = fe25519::sub(&z3, &t0); // 20.
+    t3 = fe25519::add(&z3, &z3); // 21.
+    z3 = fe25519::add(&z3, &t3); // 22.
+    t3 = fe25519::add(&t0, &t0); // 23.
+    t0 = fe25519::add(&t3, &t0); // 24.
+    t0 = fe25519::sub(&t0, &t2); // 25.
+    t0 = fe25519::mul(&t0, &z3); // 26.
+    y3 = fe25519::add(&y3, &t0); // 27.
+    t0 = fe25519::mul(&y, &z); // 28.
+    t0 = fe25519::add(&t0, &t0); // 29.
+    z3 = fe25519::mul(&t0, &z3); // 30.
+    x3 = fe25519::sub(&x3, &z3); // 31.
+    z3 = fe25519::mul(&t0, &t1); // 32.
+    z3 = fe25519::add(&z3, &z3); // 33.
+    z3 = fe25519::add(&z3, &z3); // 34.
+    
     (x3, y3, z3)
 }
 
-/// Add two points
 fn ge_add(p1: &GE, p2: &GE) -> GE {
     let &(x1, y1, z1) = p1;
     let &(x2, y2, z2) = p2;
 
-    let t0 = fe25519::mul(&x1, &x2); //  1.
-    let t1 = fe25519::mul(&y1, &y2); //  2.
-    let t2 = fe25519::mul(&z1, &z2); //  3.
-    let t3 = fe25519::add(&x1, &y1); //  4.
-    let t4 = fe25519::add(&x2, &y2); //  5.
-    let t3 = fe25519::mul(&t3, &t4); //  6.
-    let t4 = fe25519::add(&t0, &t1); //  7.
-    let t3 = fe25519::sub(&t3, &t4); //  8.
-    let t4 = fe25519::add(&y1, &z1); //  9.
-    let x3 = fe25519::add(&y2, &z2); // 10.
-    let t4 = fe25519::mul(&t4, &x3); // 11.
-    let x3 = fe25519::add(&t1, &t2); // 12.
-    let t4 = fe25519::sub(&t4, &x3); // 13.
-    let x3 = fe25519::add(&x1, &z1); // 14.
-    let y3 = fe25519::add(&x2, &z2); // 15.
-    let x3 = fe25519::mul(&x3, &y3); // 16.
-    let y3 = fe25519::add(&t0, &t2); // 17.
-    let y3 = fe25519::sub(&x3, &y3); // 18.
-    let z3 = fe25519::mul_u16(&t2, B); // 19.
-    let x3 = fe25519::sub(&y3, &z3); // 20.
-    let z3 = fe25519::add(&x3, &x3); // 21.
-    let x3 = fe25519::add(&x3, &z3); // 22.
-    let z3 = fe25519::sub(&t1, &x3); // 23.
-    let x3 = fe25519::add(&t1, &x3); // 24.
-    let y3 = fe25519::mul_u16(&y3, B); // 25.
-    let t1 = fe25519::add(&t2, &t2); // 26.
-    let t2 = fe25519::add(&t1, &t2); // 27.
-    let y3 = fe25519::sub(&y3, &t2); // 28.
-    let y3 = fe25519::sub(&y3, &t0); // 29.
-    let t1 = fe25519::add(&y3, &y3); // 30.
-    let y3 = fe25519::add(&t1, &y3); // 31.
-    let t1 = fe25519::add(&t0, &t0); // 32.
-    let t0 = fe25519::add(&t1, &t0); // 33.
-    let t0 = fe25519::sub(&t0, &t2); // 34.
-    let t1 = fe25519::mul(&t4, &y3); // 35.
-    let t2 = fe25519::mul(&t0, &y3); // 36.
-    let y3 = fe25519::mul(&x3, &z3); // 37.
-    let y3 = fe25519::add(&y3, &t2); // 38.
-    let x3 = fe25519::mul(&t3, &x3); // 39.
-    let x3 = fe25519::sub(&x3, &t1); // 40.
-    let z3 = fe25519::mul(&t4, &z3); // 41.
-    let t1 = fe25519::mul(&t3, &t0); // 42.
-    let z3 = fe25519::add(&z3, &t1); // 43.
+    let mut t0;
+    let mut t1;
+    let mut t2;
+    let mut t4;
+    let mut t3;
+    let mut x3;
+    let mut y3;
+    let mut z3;
+
+    t0 = fe25519::mul(&x1, &x2); //  1.
+    t1 = fe25519::mul(&y1, &y2); //  2.
+    t2 = fe25519::mul(&z1, &z2); //  3.
+    t3 = fe25519::add(&x1, &y1); //  4.
+    t4 = fe25519::add(&x2, &y2); //  5.
+    t3 = fe25519::mul(&t3, &t4); //  6.
+    t4 = fe25519::add(&t0, &t1); //  7.
+    t3 = fe25519::sub(&t3, &t4); //  8.
+    t4 = fe25519::add(&y1, &z1); //  9.
+    x3 = fe25519::add(&y2, &z2); // 10.
+    t4 = fe25519::mul(&t4, &x3); // 11.
+    x3 = fe25519::add(&t1, &t2); // 12.
+    t4 = fe25519::sub(&t4, &x3); // 13.
+    x3 = fe25519::add(&x1, &z1); // 14.
+    y3 = fe25519::add(&x2, &z2); // 15.
+    x3 = fe25519::mul(&x3, &y3); // 16.
+    y3 = fe25519::add(&t0, &t2); // 17.
+    y3 = fe25519::sub(&x3, &y3); // 18.
+    z3 = fe25519::mul_u16(&t2, B); // 19.
+    x3 = fe25519::sub(&y3, &z3); // 20.
+    z3 = fe25519::add(&x3, &x3); // 21.
+    x3 = fe25519::add(&x3, &z3); // 22.
+    z3 = fe25519::sub(&t1, &x3); // 23.
+    x3 = fe25519::add(&t1, &x3); // 24.
+    y3 = fe25519::mul_u16(&y3, B); // 25.
+    t1 = fe25519::add(&t2, &t2); // 26.
+    t2 = fe25519::add(&t1, &t2); // 27.
+    y3 = fe25519::sub(&y3, &t2); // 28.
+    y3 = fe25519::sub(&y3, &t0); // 29.
+    t1 = fe25519::add(&y3, &y3); // 30.
+    y3 = fe25519::add(&t1, &y3); // 31.
+    t1 = fe25519::add(&t0, &t0); // 32.
+    t0 = fe25519::add(&t1, &t0); // 33.
+    t0 = fe25519::sub(&t0, &t2); // 34.
+    t1 = fe25519::mul(&t4, &y3); // 35.
+    t2 = fe25519::mul(&t0, &y3); // 36.
+    y3 = fe25519::mul(&x3, &z3); // 37.
+    y3 = fe25519::add(&y3, &t2); // 38.
+    x3 = fe25519::mul(&t3, &x3); // 39.
+    x3 = fe25519::sub(&x3, &t1); // 40.
+    z3 = fe25519::mul(&t4, &z3); // 41.
+    t1 = fe25519::mul(&t3, &t0); // 42.
+    z3 = fe25519::add(&z3, &t1); // 43.
 
     (x3, y3, z3)
 }
@@ -395,7 +385,7 @@ fn benchmark(peripherals: &mut Peripherals) {
         0x00, 0x00,
     ];
     peripherals.DWT.enable_cycle_counter();
-
+    
     // Measure baseline latency
     let tick = cortex_m::peripheral::DWT::get_cycle_count();
     let tock = cortex_m::peripheral::DWT::get_cycle_count();
@@ -413,16 +403,11 @@ fn benchmark(peripherals: &mut Peripherals) {
     hprintln!().unwrap();
     let expected = [0; 64];
     assert_eq!(&q[..], &expected[..]);
-
+    
     // Report
     let sample = tock - tick;
     let latency = sample - baseline;
-    hprintln!(
-        "Measured latency: {}cc (i.e. {}kcc)",
-        latency,
-        latency / 1000
-    )
-    .unwrap();
+    hprintln!("Measured latency: {}cc (i.e. {}kcc)", latency, latency / 1000).unwrap();
 }
 
 #[entry]

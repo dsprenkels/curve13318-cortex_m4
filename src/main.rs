@@ -1,3 +1,4 @@
+#![feature(asm)]
 #![no_main]
 #![no_std]
 
@@ -42,7 +43,7 @@ fn dump_ge(name: &'static str, p: &mut GE) {
 
 fn ge_double(p: &GE) -> GE {
     let &(x, y, z) = p;
-    
+
     let mut t0;
     let t1;
     let mut t2;
@@ -50,8 +51,7 @@ fn ge_double(p: &GE) -> GE {
     let mut x3;
     let mut y3;
     let mut z3;
-    
-    // TODO(dsprenkels) Try Karatsuba trick
+
     t0 = fe25519::square(&x); //  1.
     t1 = fe25519::square(&y); //  2.
     t2 = fe25519::square(&z); //  3.
@@ -59,23 +59,19 @@ fn ge_double(p: &GE) -> GE {
     t3 = fe25519::add(&t3, &t3); //  5.
     z3 = fe25519::mul(&x, &z); //  6.
     z3 = fe25519::add(&z3, &z3); //  7.
-    y3 = fe25519::mul_u16(&t2, B); //  8.
+    y3 = fe25519::mul_u16(t2.copy(), B); //  8.
     y3 = fe25519::sub(&y3, &z3); //  9.
-    x3 = fe25519::add(&y3, &y3); // 10.
-    y3 = fe25519::add(&x3, &y3); // 11.
+    y3 = fe25519::mul_u16(y3, 3); // 11.
     x3 = fe25519::sub(&t1, &y3); // 12.
     y3 = fe25519::add(&t1, &y3); // 13.
     y3 = fe25519::mul(&x3, &y3); // 14.
     x3 = fe25519::mul(&x3, &t3); // 15.
-    t3 = fe25519::add(&t2, &t2); // 16.
-    t2 = fe25519::add(&t2, &t3); // 17.
-    z3 = fe25519::mul_u16(&z3, B); // 18.
+    t2 = fe25519::mul_u16(t2, 3); // 17.
+    z3 = fe25519::mul_u16(z3, B); // 18.
     z3 = fe25519::sub(&z3, &t2); // 19.
     z3 = fe25519::sub(&z3, &t0); // 20.
-    t3 = fe25519::add(&z3, &z3); // 21.
-    z3 = fe25519::add(&z3, &t3); // 22.
-    t3 = fe25519::add(&t0, &t0); // 23.
-    t0 = fe25519::add(&t3, &t0); // 24.
+    z3 = fe25519::mul_u16(z3, 3); // 22.
+    t0 = fe25519::mul_u16(t0, 3); // 24.
     t0 = fe25519::sub(&t0, &t2); // 25.
     t0 = fe25519::mul(&t0, &z3); // 26.
     y3 = fe25519::add(&y3, &t0); // 27.
@@ -84,9 +80,8 @@ fn ge_double(p: &GE) -> GE {
     z3 = fe25519::mul(&t0, &z3); // 30.
     x3 = fe25519::sub(&x3, &z3); // 31.
     z3 = fe25519::mul(&t0, &t1); // 32.
-    z3 = fe25519::add(&z3, &z3); // 33.
-    z3 = fe25519::add(&z3, &z3); // 34.
-    
+    z3 = fe25519::mul_u16(z3, 4); // 34
+
     (x3, y3, z3)
 }
 
@@ -121,21 +116,18 @@ fn ge_add(p1: &GE, p2: &GE) -> GE {
     x3 = fe25519::mul(&x3, &y3); // 16.
     y3 = fe25519::add(&t0, &t2); // 17.
     y3 = fe25519::sub(&x3, &y3); // 18.
-    z3 = fe25519::mul_u16(&t2, B); // 19.
+    z3 = fe25519::mul_u16(t2.copy(), B); // 19.
     x3 = fe25519::sub(&y3, &z3); // 20.
-    z3 = fe25519::add(&x3, &x3); // 21.
-    x3 = fe25519::add(&x3, &z3); // 22.
+    x3 = fe25519::mul_u16(x3, 3); // 22.
     z3 = fe25519::sub(&t1, &x3); // 23.
     x3 = fe25519::add(&t1, &x3); // 24.
-    y3 = fe25519::mul_u16(&y3, B); // 25.
-    t1 = fe25519::add(&t2, &t2); // 26.
-    t2 = fe25519::add(&t1, &t2); // 27.
+    y3 = fe25519::mul_u16(y3, B); // 25.
+    t2 = fe25519::mul_u16(t2, 3); // 27.
     y3 = fe25519::sub(&y3, &t2); // 28.
     y3 = fe25519::sub(&y3, &t0); // 29.
     t1 = fe25519::add(&y3, &y3); // 30.
     y3 = fe25519::add(&t1, &y3); // 31.
-    t1 = fe25519::add(&t0, &t0); // 32.
-    t0 = fe25519::add(&t1, &t0); // 33.
+    t0 = fe25519::mul_u16(t0, 3); // 33.
     t0 = fe25519::sub(&t0, &t2); // 34.
     t1 = fe25519::mul(&t4, &y3); // 35.
     t2 = fe25519::mul(&t0, &y3); // 36.
@@ -311,9 +303,9 @@ fn compute_ptable_idx(bits: u8) -> u8 {
 }
 
 fn select(select_idx: usize, ptable: &[GE; 16]) -> GE {
-    let mut r_x = fe25519::default();
-    let mut r_y = fe25519::default();
-    let mut r_z = fe25519::default();
+    let mut r_x = fe25519::zero();
+    let mut r_y = fe25519::zero();
+    let mut r_z = fe25519::zero();
     for (scan_idx, (p_x, p_y, p_z)) in ptable.iter().enumerate() {
         let condition = scan_idx == select_idx;
         r_x = r_x.cmov(p_x, condition);
@@ -371,6 +363,7 @@ fn scalarmult(p_bytes: &[u8; 64], key: &[u8; 32]) -> [u8; 64] {
     result
 }
 
+#[inline(never)]
 fn benchmark(peripherals: &mut Peripherals) {
     let p = [
         0xDD, 0x50, 0xBE, 0xCC, 0xCD, 0xD3, 0x7D, 0x2B, 0x31, 0x72, 0xE0, 0x79, 0x1E, 0xDF, 0xD5,
@@ -385,7 +378,7 @@ fn benchmark(peripherals: &mut Peripherals) {
         0x00, 0x00,
     ];
     peripherals.DWT.enable_cycle_counter();
-    
+
     // Measure baseline latency
     let tick = cortex_m::peripheral::DWT::get_cycle_count();
     let tock = cortex_m::peripheral::DWT::get_cycle_count();
@@ -403,11 +396,153 @@ fn benchmark(peripherals: &mut Peripherals) {
     hprintln!().unwrap();
     let expected = [0; 64];
     assert_eq!(&q[..], &expected[..]);
-    
+
     // Report
     let sample = tock - tick;
     let latency = sample - baseline;
-    hprintln!("Measured latency: {}cc (i.e. {}kcc)", latency, latency / 1000).unwrap();
+    hprintln!(
+        "Measured latency: {}cc (i.e. {}kcc)",
+        latency,
+        latency / 1000
+    )
+    .unwrap();
+}
+
+#[inline(never)]
+fn micro_benchmark(_peripherals: &mut Peripherals) {
+    /// Tell the compiler not to screw us over with their const-eval optimizations
+    #[inline(always)]
+    fn clobber() {
+        unsafe{asm!(""::: "memory");}
+    }
+    
+    // Micro-benchmark of add
+    let tmp = fe25519::zero();
+    let tick = cortex_m::peripheral::DWT::get_cycle_count();
+    clobber();
+    let tmp2 = fe25519::add(&tmp, &tmp);
+    clobber();
+    let tock = cortex_m::peripheral::DWT::get_cycle_count();
+    hprintln!("`add(&tmp, &tmp)`").unwrap();
+    hprintln!("  tock - tick: {} - {} = {}", tock, tick, tock - tick).unwrap();
+    hprintln!().unwrap();
+    unsafe {
+        assert_eq!(&tmp2.as_uint8_t[..], &tmp.as_uint8_t[..]);
+    }
+    
+    // Micro-benchmark of sub
+    let tmp = fe25519::zero();
+    let tick = cortex_m::peripheral::DWT::get_cycle_count();
+    clobber();
+    let tmp2 = fe25519::sub(&tmp, &tmp);
+    clobber();
+    let tock = cortex_m::peripheral::DWT::get_cycle_count();
+    hprintln!("`sub(&tmp, &tmp)`").unwrap();
+    hprintln!("  tock - tick: {} - {} = {}", tock, tick, tock - tick).unwrap();
+    hprintln!().unwrap();
+    unsafe {
+        let expected = [237, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 127];
+        assert_eq!(&tmp2.as_uint8_t[..], &expected[..]);
+    }
+    
+    // Micro-benchmark of mul_u16
+    let tmp = fe25519::zero();
+    let tmp2 = tmp.clone();
+    let tick = cortex_m::peripheral::DWT::get_cycle_count();
+    clobber();
+    let tmp2 = fe25519::mul_u16(tmp2, B);
+    clobber();
+    let tock = cortex_m::peripheral::DWT::get_cycle_count();
+    hprintln!("`mul_u16(&tmp, B)`").unwrap();
+    hprintln!("  tock - tick: {} - {} = {}", tock, tick, tock - tick).unwrap();
+    hprintln!().unwrap();
+    unsafe {
+        assert_eq!(&tmp2.as_uint8_t[..], &tmp.as_uint8_t[..]);
+    }
+    
+    // Micro-benchmark of mul
+    let tmp = fe25519::zero();
+    let tick = cortex_m::peripheral::DWT::get_cycle_count();
+    clobber();
+    let tmp2 = fe25519::mul(&tmp, &tmp);
+    clobber();
+    let tock = cortex_m::peripheral::DWT::get_cycle_count();
+    hprintln!("`mul(&tmp, &tmp)`").unwrap();
+    hprintln!("  tock - tick: {} - {} = {}", tock, tick, tock - tick).unwrap();
+    hprintln!().unwrap();
+    unsafe {
+        assert_eq!(&tmp2.as_uint8_t[..], &tmp.as_uint8_t[..]);
+    }
+
+    // Micro-benchmark of square
+    let tmp = fe25519::zero();
+    let tick = cortex_m::peripheral::DWT::get_cycle_count();
+    clobber();
+    let tmp2 = fe25519::square(&tmp);
+    clobber();
+    let tock = cortex_m::peripheral::DWT::get_cycle_count();
+    hprintln!("`square(&tmp, &tmp)`").unwrap();
+    hprintln!("  tock - tick: {} - {} = {}", tock, tick, tock - tick).unwrap();
+    hprintln!().unwrap();
+    unsafe {
+        assert_eq!(&tmp2.as_uint8_t[..], &tmp.as_uint8_t[..]);
+    }
+    
+    // Micro-benchmark of select
+    let table = [GE::default(); 16];
+    let tick = cortex_m::peripheral::DWT::get_cycle_count();
+    clobber();
+    let tmp = select(0, &table);
+    clobber();
+    let tock = cortex_m::peripheral::DWT::get_cycle_count();
+    hprintln!("`select(0, &table)`").unwrap();
+    hprintln!("  tock - tick: {} - {} = {}", tock, tick, tock - tick).unwrap();
+    hprintln!().unwrap();
+    unsafe {
+        assert_eq!(&tmp.0.as_uint8_t[..], &table[0].0.as_uint8_t[..]);
+    }
+    
+    // Micro-benchmark of double
+    let p = GE::default();
+    let tick = cortex_m::peripheral::DWT::get_cycle_count();
+    clobber();
+    let tmp = ge_double(&p);
+    clobber();
+    let tock = cortex_m::peripheral::DWT::get_cycle_count();
+    hprintln!("`double(&p)`").unwrap();
+    hprintln!("  tock - tick: {} - {} = {}", tock, tick, tock - tick).unwrap();
+    hprintln!().unwrap();
+    unsafe {
+        // assert_eq!(&tmp.0.as_uint8_t[..], &p.0.as_uint8_t[..]);
+    }
+    
+    // Micro-benchmark of add
+    let p = GE::default();
+    let tick = cortex_m::peripheral::DWT::get_cycle_count();
+    clobber();
+    let tmp = ge_add(&p, &p);
+    clobber();
+    let tock = cortex_m::peripheral::DWT::get_cycle_count();
+    hprintln!("`add(&p, &p)`").unwrap();
+    hprintln!("  tock - tick: {} - {} = {}", tock, tick, tock - tick).unwrap();
+    hprintln!().unwrap();
+    unsafe {
+        // assert_eq!(&tmp.0.as_uint8_t[..], &p.0.as_uint8_t[..]);
+    }
+    
+    // Micro-benchmark of invert
+    let tmp = fe25519::zero();
+    let tick = cortex_m::peripheral::DWT::get_cycle_count();
+    clobber();
+    let tmp2 = fe25519::invert(&tmp);
+    clobber();
+    let tock = cortex_m::peripheral::DWT::get_cycle_count();
+    hprintln!("`invert(&tmp, &tmp)`").unwrap();
+    hprintln!("  tock - tick: {} - {} = {}", tock, tick, tock - tick).unwrap();
+    hprintln!().unwrap();
+    unsafe {
+        assert_eq!(&tmp2.as_uint8_t[..], &tmp.as_uint8_t[..]);
+    }
 }
 
 #[entry]
@@ -416,6 +551,11 @@ fn main() -> ! {
     tests::do_tests();
 
     let mut peripherals = Peripherals::take().unwrap();
+
+    // Do micro-benchmarks
+    micro_benchmark(&mut peripherals);
+
+    // Macro-benchmark scalar multiplication
     benchmark(&mut peripherals);
 
     cortex_m::asm::bkpt();

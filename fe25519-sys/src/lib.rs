@@ -27,9 +27,7 @@ pub use ffi::fe25519;
 impl Default for fe25519 {
     #[inline(always)]
     fn default() -> fe25519 {
-        fe25519 {
-            as_uint8_t: [0; 32],
-        }
+        unsafe {core::mem::uninitialized()}
     }
 }
 
@@ -146,10 +144,9 @@ impl fe25519 {
     }
 
     #[inline]
-    pub fn mul_u16(&self, rhs: u16) -> fe25519 {
-        let mut result = Self::copy(self);
-        unsafe { ffi::fe25519_mpyWith_uint16(&mut result as *mut fe25519, rhs) }
-        result
+    pub fn mul_u16(mut self, rhs: u16) -> fe25519 {
+        unsafe { ffi::fe25519_mpyWith_uint16(&mut self as *mut fe25519, rhs) }
+        self
     }
 
     #[inline]

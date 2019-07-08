@@ -22,8 +22,10 @@ const FE25519_SRCS: [&str; 13] = [
 fn main() {
     cc::Build::new()
         .files(&FE25519_SRCS)
+        .define("CRYPTO_HAS_ASM_FE25519_ADD", None)
         .define("CRYPTO_HAS_ASM_FE25519_MUL", None)
         .define("CRYPTO_HAS_ASM_FE25519_SQUARE", None)
+        .define("CRYPTO_HAS_ASM_REDUCE_25519", None)
         .compile("fe25519");
     println!("cargo:rustc-link-lib=fe25519");
 
@@ -32,7 +34,7 @@ fn main() {
         .header("wrapper.h")
         .use_core()
         .ctypes_prefix("crate::c_types")
-        .whitelist_function("fe25519_add")
+        .whitelist_function("fe25519_add_asm")
         .whitelist_function("fe25519_cmov")
         .whitelist_function("fe25519_cpy")
         .whitelist_function("fe25519_cswap")
@@ -40,11 +42,11 @@ fn main() {
         .whitelist_function("fe25519_invert")
         .whitelist_function("fe25519_iseq_vartime")
         .whitelist_function("fe25519_iszero")
-        .whitelist_function("fe25519_mpyWith_uint16")
-        .whitelist_function("fe25519_mpyWith_uint31")
+        .whitelist_function("fe25519_mpyWith_uint16_asm")
         .whitelist_function("fe25519_mul_asm")
         .whitelist_function("fe25519_neg")
         .whitelist_function("fe25519_one")
+        .whitelist_function("shiftLeftOne")
         .whitelist_function("fe25519_pack")
         .whitelist_function("fe25519_reduceCompletely")
         .whitelist_function("fe25519_reduceTo256Bits_asm")

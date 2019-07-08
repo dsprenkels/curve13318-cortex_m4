@@ -22,50 +22,50 @@ pub mod ffi {
     include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 }
 
-pub use ffi::fe25519;
-
 impl Default for fe25519 {
     #[inline(always)]
     fn default() -> fe25519 {
-        unsafe {core::mem::uninitialized()}
+        let mut z = Self::uninitialized();
+        z.zero();
+        z
     }
 }
 
+pub use ffi::fe25519;
+
 impl fe25519 {
-    #[inline]
-    pub fn zero() -> fe25519 {
-        let mut z = fe25519::default();
-        unsafe {
-            ffi::fe25519_setzero(&mut z as *mut fe25519);
-        }
-        z
+    #[inline(always)]
+    pub fn uninitialized() -> fe25519 {
+        unsafe { core::mem::uninitialized() }
     }
 
     #[inline]
-    pub fn one() -> fe25519 {
-        let mut z = fe25519::default();
+    pub fn zero(&mut self) {
         unsafe {
-            ffi::fe25519_setone(&mut z as *mut fe25519);
+            ffi::fe25519_setzero(self as *mut fe25519);
         }
-        z
     }
 
     #[inline]
-    pub fn b() -> fe25519 {
-        let mut z = fe25519::zero();
+    pub fn one(&mut self) {
         unsafe {
-            z.as_uint16_t[0] += 13318;
+            ffi::fe25519_setone(self as *mut fe25519);
         }
-        z
     }
 
     #[inline]
-    pub fn copy(&self) -> fe25519 {
-        let mut result = fe25519::default();
+    pub fn b(&mut self) {
+        self.zero();
         unsafe {
-            ffi::fe25519_cpy(&mut result as *mut fe25519, self as *const fe25519);
+            self.as_uint16_t[0] += 13318;
         }
-        result
+    }
+
+    #[inline]
+    pub fn copy(&mut self, from: &fe25519) {
+        unsafe {
+            ffi::fe25519_cpy(self as *mut fe25519, from as *const fe25519);
+        }
     }
 
     #[inline]
@@ -85,22 +85,19 @@ impl fe25519 {
     }
 
     #[inline]
-    pub fn unpack(bytes: &[u8]) -> fe25519 {
+    pub fn unpack_from(&mut self, bytes: &[u8]) {
         assert_eq!(bytes.len(), 32);
-        let mut z = fe25519::default();
         unsafe {
-            ffi::fe25519_unpack(&mut z as *mut fe25519, bytes.as_ptr());
+            ffi::fe25519_unpack(self as *mut fe25519, bytes.as_ptr());
         }
-        z
     }
 
     #[inline]
-    pub fn pack(&mut self) -> [u8; 32] {
-        let mut packed = [0_u8; 32];
+    pub fn pack_into(&mut self, bytes: &mut [u8]) {
+        assert_eq!(bytes.len(), 32);
         unsafe {
-            ffi::fe25519_pack(packed.as_mut_ptr(), self as *mut fe25519);
+            ffi::fe25519_pack(bytes.as_mut_ptr(), self as *mut fe25519);
         }
-        packed
     }
 
     #[inline]
@@ -109,21 +106,41 @@ impl fe25519 {
     }
 
     #[inline]
-    pub fn sub(&self, rhs: &fe25519) -> fe25519 {
-        let mut result = fe25519::default();
+    pub fn sub(&mut self, lhs: &fe25519, rhs: &fe25519) {
         unsafe {
             ffi::fe25519_sub(
-                &mut result as *mut fe25519,
+                self as *mut fe25519,
+                lhs as *const fe25519,
+                rhs as *const fe25519,
+            );
+        }
+    }
+
+    #[inline]
+    pub fn sub_assign(&mut self, rhs: &fe25519) {
+        unsafe {
+            ffi::fe25519_sub(
+                self as *mut fe25519,
                 self as *const fe25519,
                 rhs as *const fe25519,
             );
         }
-        result
+    }
+
+    #[inline]
+    pub fn sub_assign_swap(&mut self, rhs: &fe25519) {
+        unsafe {
+            ffi::fe25519_sub(
+                self as *mut fe25519,
+                rhs as *const fe25519,
+                self as *const fe25519,
+            );
+        }
     }
 
     #[inline]
     pub fn neg(&self) -> fe25519 {
-        let mut result = fe25519::default();
+        let mut result = fe25519::uninitialized();
         unsafe {
             ffi::fe25519_neg(&mut result as *mut fe25519, self as *const fe25519);
         }
@@ -131,58 +148,81 @@ impl fe25519 {
     }
 
     #[inline]
-    pub fn add(&self, rhs: &fe25519) -> fe25519 {
-        let mut result = fe25519::default();
+    pub fn add(&mut self, lhs: &fe25519, rhs: &fe25519) {
         unsafe {
-            ffi::fe25519_add(
-                &mut result as *mut fe25519,
+            ffi::fe25519_add_asm(
+                self as *mut fe25519,
+                lhs as *const fe25519,
+                rhs as *const fe25519,
+            );
+        }
+    }
+
+    #[inline]
+    pub fn add_assign(&mut self, rhs: &fe25519) {
+        unsafe {
+            ffi::fe25519_add_asm(
+                self as *mut fe25519,
                 self as *const fe25519,
                 rhs as *const fe25519,
             );
         }
-        result
     }
 
     #[inline]
-    pub fn mul_u16(mut self, rhs: u16) -> fe25519 {
-        unsafe { ffi::fe25519_mpyWith_uint16(&mut self as *mut fe25519, rhs) }
-        self
+    pub fn double(&mut self) {
+        unsafe {
+            ffi::fe25519_add_asm(
+                self as *mut fe25519,
+                self as *const fe25519,
+                self as *const fe25519,
+            );
+        }
     }
 
     #[inline]
-    pub fn reduceCompletely(mut self) -> fe25519 {
-        unsafe { ffi::fe25519_reduceCompletely(&mut self as *mut fe25519) }
-        self
+    pub fn mul_u16(&mut self, rhs: u16) {
+        unsafe { ffi::fe25519_mpyWith_uint16_asm(self as *mut fe25519, rhs) }
     }
 
     #[inline]
-    pub fn mul(&self, rhs: &fe25519) -> fe25519 {
-        let mut result = fe25519::default();
+    pub fn reduceCompletely(&mut self) {
+        unsafe { ffi::fe25519_reduceCompletely(self as *mut fe25519) }
+    }
+
+    #[inline]
+    pub fn mul(&mut self, lhs: &fe25519, rhs: &fe25519) {
         unsafe {
             ffi::fe25519_mul_asm(
-                &mut result as *mut fe25519,
+                self as *mut fe25519,
+                lhs as *const fe25519,
+                rhs as *const fe25519,
+            );
+        }
+    }
+
+    #[inline]
+    pub fn mul_assign(&mut self, rhs: &fe25519) {
+        unsafe {
+            ffi::fe25519_mul_asm(
+                self as *mut fe25519,
                 self as *const fe25519,
                 rhs as *const fe25519,
             );
         }
-        result
     }
 
     #[inline]
-    pub fn square(&self) -> fe25519 {
-        let mut result = fe25519::default();
+    pub fn square(&mut self, rhs: &fe25519) {
         unsafe {
-            ffi::fe25519_square_asm(&mut result as *mut fe25519, self as *const fe25519);
+            ffi::fe25519_square_asm(self as *mut fe25519, rhs as *const fe25519);
         }
-        result
     }
 
     #[inline]
-    pub fn invert(&self) -> fe25519 {
-        let mut result = fe25519::default();
+    pub fn invert(&mut self, rhs: &fe25519) {
         unsafe {
-            ffi::fe25519_invert(&mut result as *mut fe25519, self as *const fe25519);
+            ffi::fe25519_invert(self as *mut fe25519, rhs as *const fe25519);
         }
-        result
     }
 }

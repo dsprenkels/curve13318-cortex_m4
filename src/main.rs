@@ -55,13 +55,13 @@ fn dump_ge(name: &'static str, p: &mut GE) {
 fn ge_double(p: &GE) -> GE {
     let &(x, y, z) = p;
 
-    let mut t0 = fe25519::uninitialized();
-    let mut t1 = fe25519::uninitialized();
-    let mut t2 = fe25519::uninitialized();
-    let mut t3 = fe25519::uninitialized();
-    let mut x3 = fe25519::uninitialized();
-    let mut y3 = fe25519::uninitialized();
-    let mut z3 = fe25519::uninitialized();
+    let mut t0 = unsafe { fe25519::uninitialized() };
+    let mut t1 = unsafe { fe25519::uninitialized() };
+    let mut t2 = unsafe { fe25519::uninitialized() };
+    let mut t3 = unsafe { fe25519::uninitialized() };
+    let mut x3 = unsafe { fe25519::uninitialized() };
+    let mut y3 = unsafe { fe25519::uninitialized() };
+    let mut z3 = unsafe { fe25519::uninitialized() };
 
     t0.square(&x); //  1.
     t1.square(&y); //  2.
@@ -102,14 +102,14 @@ fn ge_add(p1: &GE, p2: &GE) -> GE {
     let &(x1, y1, z1) = p1;
     let &(x2, y2, z2) = p2;
 
-    let mut t0 = fe25519::uninitialized();
-    let mut t1 = fe25519::uninitialized();
-    let mut t2 = fe25519::uninitialized();
-    let mut t4 = fe25519::uninitialized();
-    let mut t3 = fe25519::uninitialized();
-    let mut x3 = fe25519::uninitialized();
-    let mut y3 = fe25519::uninitialized();
-    let mut z3 = fe25519::uninitialized();
+    let mut t0 = unsafe { fe25519::uninitialized() };
+    let mut t1 = unsafe { fe25519::uninitialized() };
+    let mut t2 = unsafe { fe25519::uninitialized() };
+    let mut t4 = unsafe { fe25519::uninitialized() };
+    let mut t3 = unsafe { fe25519::uninitialized() };
+    let mut x3 = unsafe { fe25519::uninitialized() };
+    let mut y3 = unsafe { fe25519::uninitialized() };
+    let mut z3 = unsafe { fe25519::uninitialized() };
 
     t0.mul(&x1, &x2); //  1.
     t1.mul(&y1, &y2); //  2.
@@ -268,8 +268,8 @@ fn is_valid_affine_point(x: &fe25519, y: &fe25519) -> bool {
     let mut b = fe25519::default();
     b.b();
 
-    let mut lhs = fe25519::uninitialized();
-    let mut rhs = fe25519::uninitialized();
+    let mut lhs = unsafe { fe25519::uninitialized() };
+    let mut rhs = unsafe { fe25519::uninitialized() };
 
     lhs.square(y); // y^2
     rhs.square(x); // x^2
@@ -347,7 +347,8 @@ fn ladder(mut q: GE, windows: &[u8; 51], ptable: &[GE; 16]) -> GE {
         let mut one = fe25519::default();
         one.one();
         let (x_p, mut y_p, z_p) = select(usize::from(table_idx), ptable, &one);
-        let mut y_p_neg = y_p.neg();
+        let mut y_p_neg = unsafe{fe25519::uninitialized()};
+        y_p_neg.neg(&y_p);
         let sign = (w >> 4) & 0x1;
         fe25519::cswap(&mut y_p, &mut y_p_neg, sign != 0);
         q = ge_add(&q, &(x_p, y_p, z_p));
@@ -357,8 +358,8 @@ fn ladder(mut q: GE, windows: &[u8; 51], ptable: &[GE; 16]) -> GE {
 
 #[inline(never)]
 fn scalarmult(p_bytes: &[u8; 64], key: &[u8; 32]) -> [u8; 64] {
-    let mut p_x = fe25519::uninitialized();
-    let mut p_y = fe25519::uninitialized();
+    let mut p_x = unsafe { fe25519::uninitialized() };
+    let mut p_y = unsafe { fe25519::uninitialized() };
 
     p_x.unpack_from(&p_bytes[0..32]);
     p_y.unpack_from(&p_bytes[32..64]);
@@ -379,7 +380,7 @@ fn scalarmult(p_bytes: &[u8; 64], key: &[u8; 32]) -> [u8; 64] {
     y_q = y_q.cmov(&p_y, zeroth_window == 1);
     z_q = z_q.cmov(&one, zeroth_window == 1);
     let (x_q, y_q, z_q) = ladder((x_q, y_q, z_q), &windows, &ptable);
-    let mut z_inverted = fe25519::uninitialized();
+    let mut z_inverted = unsafe { fe25519::uninitialized() };
     z_inverted.invert(&z_q);
 
     let mut x_result = fe25519::default();
@@ -469,7 +470,7 @@ fn micro_benchmark(_peripherals: &mut Peripherals) {
     let tick = cortex_m::peripheral::DWT::get_cycle_count();
     clobber(&tick);
     tmp2.sub(&tmp, &tmp);
-    clobber(&tmp2);
+    clobber(&(&tmp2, &tick));
     let tock = cortex_m::peripheral::DWT::get_cycle_count();
     hprintln!("`sub(&tmp, &tmp)`").unwrap();
     hprintln!("  tock - tick: {} - {} = {}", tock, tick, tock - tick).unwrap();

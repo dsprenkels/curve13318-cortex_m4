@@ -207,6 +207,14 @@ fe25519_getparity(
 #if (defined(__clang__) || defined(__GNUC__)) && defined (CORTEX_M4)
 
 // We are using the inline assembly function defined in fe25519.h header
+void
+fe25519_sub_asm(
+    fe25519*       out,
+    const fe25519* baseValue,
+    const fe25519* valueToSubstract
+) {
+    fe25519_sub(out, baseValue, valueToSubstract);
+}
 
 #else
 
@@ -286,6 +294,16 @@ fe25519_neg(
 }
 
 #ifdef CRYPTO_HAS_ASM_FE25519_ADD
+
+// We are using the inline assembly function defined in fe25519.h header
+void
+fe25519_add_asm(
+    fe25519*       out,
+    const fe25519* baseValue,
+    const fe25519* valueToAdd
+) {
+    fe25519_add(out, baseValue, valueToAdd);
+}
 
 #else
 

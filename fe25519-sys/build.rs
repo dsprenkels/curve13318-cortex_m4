@@ -3,9 +3,8 @@ extern crate cc;
 
 use std::path::PathBuf;
 
-const FE25519_SRCS: [&str; 13] = [
+const FE25519_SRCS: [&str; 12] = [
     "fe25519/bigint.c",
-    "fe25519/cortex_m4_add_fe25519.S",
     "fe25519/cortex_m4_fe25519_mpy_uint16.S",
     "fe25519/cortex_m4_mpy121666.S",
     "fe25519/cortex_m4_mpy_192.S",
@@ -23,9 +22,11 @@ fn main() {
     cc::Build::new()
         .files(&FE25519_SRCS)
         .define("CRYPTO_HAS_ASM_FE25519_ADD", None)
+        .define("CRYPTO_HAS_ASM_FE25519_SUB", None)
         .define("CRYPTO_HAS_ASM_FE25519_MUL", None)
         .define("CRYPTO_HAS_ASM_FE25519_SQUARE", None)
         .define("CRYPTO_HAS_ASM_REDUCE_25519", None)
+        .define("CORTEX_M4", None)
         .compile("fe25519");
     println!("cargo:rustc-link-lib=fe25519");
 
@@ -54,7 +55,7 @@ fn main() {
         .whitelist_function("fe25519_setzero")
         .whitelist_function("fe25519_square_asm")
         .whitelist_function("fe25519_squareroot")
-        .whitelist_function("fe25519_sub")
+        .whitelist_function("fe25519_sub_asm")
         .whitelist_function("fe25519_unpack")
         .whitelist_function("fe25519_zero")
         .generate()

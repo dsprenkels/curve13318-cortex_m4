@@ -25,7 +25,7 @@ pub mod ffi {
 impl Default for fe25519 {
     #[inline(always)]
     fn default() -> fe25519 {
-        let mut z = Self::uninitialized();
+        let mut z = unsafe { Self::uninitialized() };
         z.zero();
         z
     }
@@ -35,7 +35,7 @@ pub use ffi::fe25519;
 
 impl fe25519 {
     #[inline(always)]
-    pub fn uninitialized() -> fe25519 {
+    pub unsafe fn uninitialized() -> fe25519 {
         unsafe { core::mem::uninitialized() }
     }
 
@@ -108,7 +108,7 @@ impl fe25519 {
     #[inline]
     pub fn sub(&mut self, lhs: &fe25519, rhs: &fe25519) {
         unsafe {
-            ffi::fe25519_sub(
+            ffi::fe25519_sub_asm(
                 self as *mut fe25519,
                 lhs as *const fe25519,
                 rhs as *const fe25519,
@@ -119,7 +119,7 @@ impl fe25519 {
     #[inline]
     pub fn sub_assign(&mut self, rhs: &fe25519) {
         unsafe {
-            ffi::fe25519_sub(
+            ffi::fe25519_sub_asm(
                 self as *mut fe25519,
                 self as *const fe25519,
                 rhs as *const fe25519,
@@ -130,7 +130,7 @@ impl fe25519 {
     #[inline]
     pub fn sub_assign_swap(&mut self, rhs: &fe25519) {
         unsafe {
-            ffi::fe25519_sub(
+            ffi::fe25519_sub_asm(
                 self as *mut fe25519,
                 rhs as *const fe25519,
                 self as *const fe25519,
@@ -139,12 +139,10 @@ impl fe25519 {
     }
 
     #[inline]
-    pub fn neg(&self) -> fe25519 {
-        let mut result = fe25519::uninitialized();
+    pub fn neg(&mut self, operand: &fe25519) {
         unsafe {
-            ffi::fe25519_neg(&mut result as *mut fe25519, self as *const fe25519);
+            ffi::fe25519_neg(self as *mut fe25519, operand as *const fe25519);
         }
-        result
     }
 
     #[inline]

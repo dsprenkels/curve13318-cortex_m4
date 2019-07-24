@@ -179,8 +179,8 @@ impl fe25519 {
     }
 
     #[inline]
-    pub fn mul_u16(&mut self, rhs: u16) {
-        unsafe { ffi::fe25519_mpyWith_uint16_asm(self as *mut fe25519, rhs) }
+    pub fn mul_u32(&mut self, rhs: u32) {
+        unsafe { ffi::fe25519_mul_u32_asm(self as *mut fe25519, rhs) }
     }
 
     #[inline]

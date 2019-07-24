@@ -12,7 +12,7 @@ use fe25519_sys::*;
 
 type GE = (fe25519, fe25519, fe25519);
 
-const B: u16 = 13318;
+const B: u32 = 13318;
 
 /// Dump a `fe25519` element to `HStdout`.
 ///
@@ -71,19 +71,19 @@ fn ge_double(p: &GE) -> GE {
     z3.mul(&x, &z); //  6.
     z3.double(); //  7.
     y3.copy(&t2);
-    y3.mul_u16(B); //  8.
+    y3.mul_u32(B); //  8.
     y3.sub_assign(&z3); //  9.
-    y3.mul_u16(3); // 11.
+    y3.mul_u32(3); // 11.
     x3.sub(&t1, &y3); // 12.
     y3.add_assign(&t1); // 13.
     y3.mul_assign(&x3); // 14.
     x3.mul_assign(&t3); // 15.
-    t2.mul_u16(3); // 17.
-    z3.mul_u16(B); // 18.
+    t2.mul_u32(3); // 17.
+    z3.mul_u32(B); // 18.
     z3.sub_assign(&t2); // 19.
     z3.sub_assign(&t0); // 20.
-    z3.mul_u16(3); // 22.
-    t0.mul_u16(3); // 24.
+    z3.mul_u32(3); // 22.
+    t0.mul_u32(3); // 24.
     t0.sub_assign(&t2); // 25.
     t0.mul_assign(&z3); // 26.
     y3.add_assign(&t0); // 27.
@@ -92,7 +92,7 @@ fn ge_double(p: &GE) -> GE {
     z3.mul_assign(&t0); // 30.
     x3.sub_assign(&z3); // 31.
     z3.mul(&t0, &t1); // 32.
-    z3.mul_u16(4); // 34
+    z3.mul_u32(4); // 34
 
     (x3, y3, z3)
 }
@@ -130,18 +130,18 @@ fn ge_add(p1: &GE, p2: &GE) -> GE {
     y3.add(&t0, &t2); // 17.
     y3.sub_assign_swap(&x3); // 18.
     z3.copy(&t2);
-    z3.mul_u16(B); // 19.
+    z3.mul_u32(B); // 19.
     x3.sub(&y3, &z3); // 20.
-    x3.mul_u16(3); // 22.
+    x3.mul_u32(3); // 22.
     z3.sub(&t1, &x3); // 23.
     x3.add_assign(&t1); // 24.
-    y3.mul_u16(B); // 25.
-    t2.mul_u16(3); // 27.
+    y3.mul_u32(B); // 25.
+    t2.mul_u32(3); // 27.
     y3.sub_assign(&t2); // 28.
     y3.sub_assign(&t0); // 29.
     t1.add(&y3, &y3); // 30.
     y3.add_assign(&t1); // 31.
-    t0.mul_u16(3); // 33.
+    t0.mul_u32(3); // 33.
     t0.sub_assign(&t2); // 34.
     t1.mul(&t4, &y3); // 35.
     t2.mul(&t0, &y3); // 36.
@@ -347,7 +347,7 @@ fn ladder(mut q: GE, windows: &[u8; 51], ptable: &[GE; 16]) -> GE {
         let mut one = fe25519::default();
         one.one();
         let (x_p, mut y_p, z_p) = select(usize::from(table_idx), ptable, &one);
-        let mut y_p_neg = unsafe{fe25519::uninitialized()};
+        let mut y_p_neg = unsafe { fe25519::uninitialized() };
         y_p_neg.neg(&y_p);
         let sign = (w >> 4) & 0x1;
         fe25519::cswap(&mut y_p, &mut y_p_neg, sign != 0);
@@ -445,7 +445,7 @@ fn micro_benchmark(_peripherals: &mut Peripherals) {
     #[inline(always)]
     fn clobber<T>(d: &T) {
         unsafe {
-            asm!("" : : "r"(d));
+            asm!("" : : "r+"(d) : "memory");
         }
     }
 
@@ -483,15 +483,15 @@ fn micro_benchmark(_peripherals: &mut Peripherals) {
         assert_eq!(&tmp2.as_uint8_t[..], &expected[..]);
     }
 
-    // Micro-benchmark of mul_u16
+    // Micro-benchmark of mul_u32
     let tmp = fe25519::default();
     let mut tmp2 = tmp.clone();
     let tick = cortex_m::peripheral::DWT::get_cycle_count();
     clobber(&tick);
-    tmp2.mul_u16(B);
+    tmp2.mul_u32(B);
     clobber(&tmp2);
     let tock = cortex_m::peripheral::DWT::get_cycle_count();
-    hprintln!("`mul_u16(&tmp, B)`").unwrap();
+    hprintln!("`mul_u32(&tmp, B)`").unwrap();
     hprintln!("  tock - tick: {} - {} = {}", tock, tick, tock - tick).unwrap();
     hprintln!().unwrap();
     unsafe {

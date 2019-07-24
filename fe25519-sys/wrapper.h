@@ -28,3 +28,9 @@ fe25519_sub_asm(
     const fe25519* baseValue,
     const fe25519* valueToSubstract
 );
+
+void
+fe25519_mul_u32_asm(
+    fe25519*       inout,
+    const uint32_t rhs
+);

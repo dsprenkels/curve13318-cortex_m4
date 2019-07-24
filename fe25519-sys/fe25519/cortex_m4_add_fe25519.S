@@ -17,7 +17,7 @@
 	.text
 	.align	2
 
-		.global	fe25519_add_asm
+	.global	fe25519_add_asm
 	.type	fe25519_add_asm, %function
 
 fe25519_add_asm:
@@ -77,4 +77,3 @@ fe25519_add_asm:
     pop {r4,r5,r6,r15}
 
 	.size	fe25519_add_asm, .-fe25519_add_asm
-

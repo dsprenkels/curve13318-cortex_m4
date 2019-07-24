@@ -3,8 +3,9 @@ extern crate cc;
 
 use std::path::PathBuf;
 
-const FE25519_SRCS: [&str; 12] = [
+const FE25519_SRCS: [&str; 13] = [
     "fe25519/bigint.c",
+    "fe25519/fe25519_mul_u32_asm.S",
     "fe25519/cortex_m4_fe25519_mpy_uint16.S",
     "fe25519/cortex_m4_mpy121666.S",
     "fe25519/cortex_m4_mpy_192.S",
@@ -43,7 +44,7 @@ fn main() {
         .whitelist_function("fe25519_invert")
         .whitelist_function("fe25519_iseq_vartime")
         .whitelist_function("fe25519_iszero")
-        .whitelist_function("fe25519_mpyWith_uint16_asm")
+        .whitelist_function("fe25519_mul_u32_asm")
         .whitelist_function("fe25519_mul_asm")
         .whitelist_function("fe25519_neg")
         .whitelist_function("fe25519_one")

@@ -443,7 +443,7 @@ fn benchmark(peripherals: &mut Peripherals) {
 fn micro_benchmark(_peripherals: &mut Peripherals) {
     /// Tell the compiler not to screw us over with their const-eval optimizations
     #[inline(always)]
-    fn clobber<T>(d: &T) {
+    fn clobber<T>(d: &mut T) {
         unsafe {
             asm!("" : : "r+"(d) : "memory");
         }
@@ -452,10 +452,10 @@ fn micro_benchmark(_peripherals: &mut Peripherals) {
     // Micro-benchmark of add
     let tmp = fe25519::default();
     let mut tmp2 = fe25519::default();
-    let tick = cortex_m::peripheral::DWT::get_cycle_count();
-    clobber(&tick);
+    let mut tick = cortex_m::peripheral::DWT::get_cycle_count();
+    clobber(&mut tick);
     tmp2.add(&tmp, &tmp);
-    clobber(&tmp2);
+    clobber(&mut tmp2);
     let tock = cortex_m::peripheral::DWT::get_cycle_count();
     hprintln!("`add(&tmp, &tmp)`").unwrap();
     hprintln!("  tock - tick: {} - {} = {}", tock, tick, tock - tick).unwrap();
@@ -467,10 +467,10 @@ fn micro_benchmark(_peripherals: &mut Peripherals) {
     // Micro-benchmark of sub
     let tmp = fe25519::default();
     let mut tmp2 = fe25519::default();
-    let tick = cortex_m::peripheral::DWT::get_cycle_count();
-    clobber(&tick);
+    let mut tick = cortex_m::peripheral::DWT::get_cycle_count();
+    clobber(&mut tick);
     tmp2.sub(&tmp, &tmp);
-    clobber(&(&tmp2, &tick));
+    clobber(&mut (&tmp2, &tick));
     let tock = cortex_m::peripheral::DWT::get_cycle_count();
     hprintln!("`sub(&tmp, &tmp)`").unwrap();
     hprintln!("  tock - tick: {} - {} = {}", tock, tick, tock - tick).unwrap();
@@ -486,10 +486,10 @@ fn micro_benchmark(_peripherals: &mut Peripherals) {
     // Micro-benchmark of mul_u32
     let tmp = fe25519::default();
     let mut tmp2 = tmp.clone();
-    let tick = cortex_m::peripheral::DWT::get_cycle_count();
-    clobber(&tick);
+    let mut tick = cortex_m::peripheral::DWT::get_cycle_count();
+    clobber(&mut tick);
     tmp2.mul_u32(B);
-    clobber(&tmp2);
+    clobber(&mut tmp2);
     let tock = cortex_m::peripheral::DWT::get_cycle_count();
     hprintln!("`mul_u32(&tmp, B)`").unwrap();
     hprintln!("  tock - tick: {} - {} = {}", tock, tick, tock - tick).unwrap();
@@ -501,10 +501,10 @@ fn micro_benchmark(_peripherals: &mut Peripherals) {
     // Micro-benchmark of mul
     let tmp = fe25519::default();
     let mut tmp2 = fe25519::default();
-    let tick = cortex_m::peripheral::DWT::get_cycle_count();
-    clobber(&tick);
+    let mut tick = cortex_m::peripheral::DWT::get_cycle_count();
+    clobber(&mut tick);
     tmp2.mul(&tmp, &tmp);
-    clobber(&tmp2);
+    clobber(&mut tmp2);
     let tock = cortex_m::peripheral::DWT::get_cycle_count();
     hprintln!("`mul(&tmp, &tmp)`").unwrap();
     hprintln!("  tock - tick: {} - {} = {}", tock, tick, tock - tick).unwrap();
@@ -516,10 +516,10 @@ fn micro_benchmark(_peripherals: &mut Peripherals) {
     // Micro-benchmark of square
     let tmp = fe25519::default();
     let mut tmp2 = fe25519::default();
-    let tick = cortex_m::peripheral::DWT::get_cycle_count();
-    clobber(&tick);
+    let mut tick = cortex_m::peripheral::DWT::get_cycle_count();
+    clobber(&mut tick);
     tmp2.square(&tmp);
-    clobber(&tmp2);
+    clobber(&mut tmp2);
     let tock = cortex_m::peripheral::DWT::get_cycle_count();
     hprintln!("`square(&tmp, &tmp)`").unwrap();
     hprintln!("  tock - tick: {} - {} = {}", tock, tick, tock - tick).unwrap();
@@ -532,10 +532,10 @@ fn micro_benchmark(_peripherals: &mut Peripherals) {
     let table = [GE::default(); 16];
     let mut one = fe25519::default();
     one.one();
-    let tick = cortex_m::peripheral::DWT::get_cycle_count();
-    clobber(&tick);
-    let tmp = select(0, &table, &one);
-    clobber(&tmp);
+    let mut tick = cortex_m::peripheral::DWT::get_cycle_count();
+    clobber(&mut tick);
+    let mut tmp = select(0, &table, &one);
+    clobber(&mut tmp);
     let tock = cortex_m::peripheral::DWT::get_cycle_count();
     hprintln!("`select(0, &table)`").unwrap();
     hprintln!("  tock - tick: {} - {} = {}", tock, tick, tock - tick).unwrap();
@@ -546,10 +546,10 @@ fn micro_benchmark(_peripherals: &mut Peripherals) {
 
     // Micro-benchmark of double
     let p = GE::default();
-    let tick = cortex_m::peripheral::DWT::get_cycle_count();
-    clobber(&tick);
-    let tmp = ge_double(&p);
-    clobber(&tmp);
+    let mut tick = cortex_m::peripheral::DWT::get_cycle_count();
+    clobber(&mut tick);
+    let mut tmp = ge_double(&p);
+    clobber(&mut tmp);
     let tock = cortex_m::peripheral::DWT::get_cycle_count();
     hprintln!("`double(&p)`").unwrap();
     hprintln!("  tock - tick: {} - {} = {}", tock, tick, tock - tick).unwrap();
@@ -560,25 +560,22 @@ fn micro_benchmark(_peripherals: &mut Peripherals) {
 
     // Micro-benchmark of add
     let p = GE::default();
-    let tick = cortex_m::peripheral::DWT::get_cycle_count();
-    clobber(&tick);
-    let tmp = ge_add(&p, &p);
-    clobber(&tmp);
+    let mut tick = cortex_m::peripheral::DWT::get_cycle_count();
+    clobber(&mut tick);
+    let mut tmp = ge_add(&p, &p);
+    clobber(&mut tmp);
     let tock = cortex_m::peripheral::DWT::get_cycle_count();
     hprintln!("`add(&p, &p)`").unwrap();
     hprintln!("  tock - tick: {} - {} = {}", tock, tick, tock - tick).unwrap();
     hprintln!().unwrap();
-    // unsafe {
-    //     assert_eq!(&tmp.0.as_uint8_t[..], &p.0.as_uint8_t[..]);
-    // }
 
     // Micro-benchmark of invert
     let tmp = fe25519::default();
     let mut tmp2 = fe25519::default();
-    let tick = cortex_m::peripheral::DWT::get_cycle_count();
-    clobber(&tick);
+    let mut tick = cortex_m::peripheral::DWT::get_cycle_count();
+    clobber(&mut tick);
     tmp2.invert(&tmp);
-    clobber(&tmp2);
+    clobber(&mut tmp2);
     let tock = cortex_m::peripheral::DWT::get_cycle_count();
     hprintln!("`invert(&tmp, &tmp)`").unwrap();
     hprintln!("  tock - tick: {} - {} = {}", tock, tick, tock - tick).unwrap();

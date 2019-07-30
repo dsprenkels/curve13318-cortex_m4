@@ -445,7 +445,7 @@ fn micro_benchmark(_peripherals: &mut Peripherals) {
     #[inline(always)]
     fn clobber<T>(d: &mut T) {
         unsafe {
-            asm!("" : : "r+"(d) : "memory");
+            asm!("" : : "r+"(d as *mut T) : "memory");
         }
     }
 

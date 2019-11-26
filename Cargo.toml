@@ -3,6 +3,7 @@ name = "curve13318"
 version = "0.1.0"
 authors = ["Amber Sprenkels <amber@electricdusk.com>"]
 edition = "2018"
+license = "CC0-1.0"
 
 [workspace]
 members = ["fe25519-sys"]
